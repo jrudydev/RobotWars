@@ -9,8 +9,6 @@
 #import "TerminatorRobot.h"
 #import "Bullet.h"
 
-#define ARC4RANDOM_MAX      0x100000000
-
 typedef NS_ENUM(NSInteger, RobotState) {
     RobotStateDefault,
     RobotStateTurnaround,
@@ -42,8 +40,6 @@ static int evadeMoveDist = 60;
         _movingFoward= YES;
         _friendHitPoints = 20;
         _enemyHitPoints = 20;
-        
-        //_currentRobotState = RobotStateFiring;
     }
     
     return self;
@@ -51,11 +47,6 @@ static int evadeMoveDist = 60;
 
 - (void)run {
     while (true) {
-        /*  if (_lastKnownPositionTimestamp < 2.0f && _lastKnownPositionTimestamp != 0.0f)
-         {
-         _currentRobotState = RobotStateSnipe;
-         }
-         */
         if (_currentRobotState == RobotStateFiring) {
             
             if ((self.currentTimestamp - _lastKnownPositionTimestamp) > 1.f) {
@@ -80,6 +71,7 @@ static int evadeMoveDist = 60;
         
         if (_currentRobotState == RobotStateSearching) {
             CGFloat angle = [self angleBetweenGunHeadingDirectionAndWorldPosition:_lastKnownPosition];
+            // this code gets the middle point fo the map
             /*    if ((self.currentTimestamp - _lastKnownPositionTimestamp) > 2.f)
              {
              CGPoint tankPos = ccp([self robotBoundingBox].origin.x + [self robotBoundingBox].size.width /2, [self robotBoundingBox].origin.y + [self robotBoundingBox].size.height / 2);
@@ -91,6 +83,8 @@ static int evadeMoveDist = 60;
              angle = [self angleBetweenGunHeadingDirectionAndWorldPosition:_lastKnownPosition];
              }
              */
+            
+            // adjust turret to last known position
             if ((self.currentTimestamp - _lastKnownPositionTimestamp) < 1.f)
             {
                 if (angle >= 0) {
@@ -100,6 +94,7 @@ static int evadeMoveDist = 60;
                 }
             }
             
+            // take a shot then evade
             [self shoot];
             [self moveTank:50];
             [self turnRobotRandomSide:20];
@@ -134,47 +129,31 @@ static int evadeMoveDist = 60;
         
         if (_currentRobotState == RobotStateEvade)
         {
+            // choose adjustment angle
             CGFloat angle = [self angleBetweenHeadingDirectionAndWorldPosition:_lastKnownPosition];
             if (angle > -30 && angle <= 0)
             {
                 [self turnRobotLeft:50];
-                //_movingFoward = NO;
-                
             }
             else if (angle >= 0 && angle < 30)
             {
                 [self turnRobotRight:50];
-                //_movingFoward = NO;
-                
             }
             else if (angle > 150 && angle <= 180)
             {
                 [self turnRobotLeft:50];
-                //_movingFoward = YES;
-                
             }
             else if (angle >= -180 && angle <-150)
             {
                 [self turnRobotRight:50];
-                //_movingFoward = YES;
-            }
-            else if (angle > -90 && angle < 90)
-            {
-                //_movingFoward = NO;
-            }
-            else
-            {
-                //_movingFoward = YES;
             }
             
-            //int random = ((double)arc4random() / ARC4RANDOM_MAX);
-            
-            //_movingFoward = (random % 2 == 1) ? YES : NO;
             [self moveTank:evadeMoveDist];
             
             _currentRobotState = RobotStateFiring;
         }
         
+        // this state is not in use
         if (_currentRobotState == RobotStateSnipe)
         {
             CGFloat angle = [self angleBetweenGunHeadingDirectionAndWorldPosition:_lastKnownPosition];
@@ -192,6 +171,7 @@ static int evadeMoveDist = 60;
     // There are a couple of neat things you could do in this handler
     _enemyHitPoints--;
     
+    // trying to calculate enemy tank movements
     _lastKnownTrajectory = ccpSub(bullet.position, _lastKnownPosition);
     NSLog(@"trajector calc x:%f <> y:%f", _lastKnownTrajectory.x, _lastKnownTrajectory.y);
     
@@ -205,12 +185,16 @@ static int evadeMoveDist = 60;
 }
 
 - (void)scannedRobot:(Robot *)robot atPosition:(CGPoint)position {
+    // used to cancel all actions and start shooting
     /*if (_currentRobotState != RobotStateFiring) {
      [self cancelActiveAction];
      }
      */
+
+    // trying to calculate enemy tank movements
     //_lastKnownTrajectory = ccpSub(position, _lastKnownPosition);
     //NSLog(@"trajector calc x:%d <> y:%d", _lastKnownTrajectory.x, _lastKnownTrajectory.y);
+    
     _lastKnownPosition = position;
     _lastKnownPositionTimestamp = self.currentTimestamp;
     _currentRobotState = RobotStateFiring;
@@ -223,14 +207,6 @@ static int evadeMoveDist = 60;
         RobotState previousState = _currentRobotState;
         _currentRobotState = RobotStateTurnaround;
         NSLog(@"hit angle: %f", angle);
-        /*
-         // always turn to head straight away from the wall
-         if (angle >= 0) {
-         [self turnRobotLeft:abs(angle)];
-         } else {
-         [self turnRobotRight:abs(angle)];
-         }
-         */
         
         if (_movingFoward)
         {
@@ -238,6 +214,7 @@ static int evadeMoveDist = 60;
             // change drive direction
             _movingFoward = NO;
             
+            // staighten out tank and adjust turret
             if (angle >= 0) {
                 angle = 180 - angle;
                 [self turnRobotRight:abs(angle)];
@@ -247,18 +224,6 @@ static int evadeMoveDist = 60;
                 [self turnRobotLeft:abs(angle)];
                 [self turnGunRight:abs(angle)];
             }
-            
-            /*   // tank is moving in forward direction
-             if (angle > -90 && angle < 90)
-             {
-             
-             
-             
-             }
-             else
-             {
-             _movingFoward = YES;
-             }*/
         }
         else
         {
@@ -266,6 +231,7 @@ static int evadeMoveDist = 60;
             // change drive direction
             _movingFoward = YES;
             
+            // staighten out tank and adjust turret
             if (angle >= 0)
             {
                 [self turnRobotLeft:abs(angle)];
@@ -276,14 +242,6 @@ static int evadeMoveDist = 60;
                 [self turnRobotRight:abs(angle)];
                 [self turnGunLeft:abs(angle)];
             }
-            /*if (angle > -90 && angle < 90)
-             {
-             _movingFoward = YES;
-             }
-             else
-             {
-             _movingFoward = NO;
-             }*/
         }
         
         [self moveTank:100];
@@ -292,6 +250,7 @@ static int evadeMoveDist = 60;
     }
 }
 
+// moves tank acording to direction
 - (void)moveTank:(int)distance
 {
     if(_movingFoward)
@@ -304,6 +263,7 @@ static int evadeMoveDist = 60;
     }
 }
 
+// finds closest wall and returns perpendicular vector
 - (CGPoint)vectorFromWall
 {
     float distFromLeftWall = [self robotBoundingBox].origin.x + [self robotBoundingBox].size.width / 2;
@@ -334,6 +294,7 @@ static int evadeMoveDist = 60;
     return pos;
 }
 
+// used to turn the robot to random sides
 - (void)turnRobotRandomSide:(int)distance
 {
     if (arc4random() % 2 == 0)
